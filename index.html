@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Presidents</title>
+<meta name="description" content="Spaced-repetition flashcards for the presidents of the United States.">
+<meta name="theme-color" content="#24427a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Presidents">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one ruled index card on a desk, grade buttons beneath, a 47-cell progress strip above */
+:root{
+  --desk:#e9ecf1; --card:#ffffff; --ink:#1b2333; --muted:#5f6a7d;
+  --rule:#b9cbe6; --margin:#d9534f; --accent:#24427a; --chip:#eef2f8;
+  --rep:#b23a3a; --dem:#2c5ba8; --other:#6b6f7a; --good:#2f7d4f;
+  --lv1:#c9d6ea; --lv2:#8ea8d3; --lv3:#4f74b3; --lv4:#24427a;
+  --f-year:"Zilla Slab", Rockwell, "Courier New", serif;
+  --f-name:"Source Serif 4", Georgia, serif;
+  --f-ui:"IBM Plex Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --desk:#12161e; --card:#1d2330; --ink:#e8ecf3; --muted:#9aa5b8;
+  --rule:#2e3a52; --margin:#c75a54; --accent:#8fb0ea; --chip:#262e3e;
+  --rep:#e07a7a; --dem:#82a8ec; --other:#a6abb6; --good:#6cc28f;
+  --lv1:#2b3a57; --lv2:#3e5f99; --lv3:#5f87cf; --lv4:#a3c0f2; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --desk:#12161e; --card:#1d2330; --ink:#e8ecf3; --muted:#9aa5b8;
+  --rule:#2e3a52; --margin:#c75a54; --accent:#8fb0ea; --chip:#262e3e;
+  --rep:#e07a7a; --dem:#82a8ec; --other:#a6abb6; --good:#6cc28f;
+  --lv1:#2b3a57; --lv2:#3e5f99; --lv3:#5f87cf; --lv4:#a3c0f2; color-scheme:dark}
+body{background:var(--desk);color:var(--ink);font-family:var(--f-ui)}
+.wrap{max-width:640px;margin:0 auto;padding-top:calc(20px + env(safe-area-inset-top,0px));padding-bottom:calc(40px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:16px}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-name);font-weight:600;font-size:1.5rem;margin:0;text-wrap:balance}
+.status{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.strip{display:grid;grid-template-columns:repeat(47,1fr);gap:2px}
+.cell{height:16px;border-radius:2px;background:transparent;border:1px solid var(--rule)}
+.cell.l0{background:var(--margin);border-color:var(--margin);opacity:.75}
+.cell.l1{background:var(--lv1);border-color:var(--lv1)}
+.cell.l2{background:var(--lv2);border-color:var(--lv2)}
+.cell.l3{background:var(--lv3);border-color:var(--lv3)}
+.cell.l4{background:var(--lv4);border-color:var(--lv4)}
+.cell.now{outline:2px solid var(--ink);outline-offset:1px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.74rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block;border:1px solid var(--rule)}
+.stats{display:flex;gap:18px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.stats b{color:var(--ink);font-weight:600}
+
+.stage{perspective:1400px}
+.card{position:relative;width:100%;aspect-ratio:5/3;max-width:100%;cursor:pointer;
+  transform-style:preserve-3d;transition:transform .45s ease;border:none;padding:0;background:none;display:block;font:inherit}
+.card.flipped{transform:rotateY(180deg)}
+.card:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:6px}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  background:var(--card);border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,.12),0 8px 24px rgba(20,30,50,.12);
+  background-image:linear-gradient(var(--card) 0 22%, transparent 22%),
+    repeating-linear-gradient(to bottom, transparent 0 calc(1.9em - 1px), var(--rule) calc(1.9em - 1px) 1.9em);
+  display:flex;flex-direction:column;overflow:hidden;color:var(--ink);text-align:left}
+.face::before{content:"";position:absolute;left:0;right:0;top:22%;height:2px;background:var(--margin);opacity:.8}
+.face.back{transform:rotateY(180deg)}
+.tag{position:absolute;top:12px;left:16px;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lvl{position:absolute;top:12px;right:16px;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lvl.new{color:var(--margin);font-weight:600}
+.hint{position:absolute;bottom:10px;right:14px;font-size:.72rem;color:var(--muted)}
+.front .years{margin:auto;font-family:var(--f-year);font-weight:700;font-size:clamp(2.4rem,11vw,4.6rem);
+  font-variant-numeric:tabular-nums;letter-spacing:.01em;padding-top:8%}
+.back .body{padding:calc(22% + 14px) 22px 18px;display:flex;flex-direction:column;gap:10px;min-width:0;height:100%;box-sizing:border-box}
+.name{font-family:var(--f-name);font-weight:600;font-size:clamp(1.35rem,5.4vw,2rem);line-height:1.15;text-wrap:balance}
+.ord{font-family:var(--f-year);font-weight:500;color:var(--muted);font-size:.8em;margin-right:.3em}
+.party{align-self:flex-start;font-size:.78rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 9px;border-radius:999px;background:var(--chip);color:var(--other)}
+.party.rep{color:var(--rep)}.party.dem{color:var(--dem)}
+.links{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.92rem;margin:auto 0 0}
+.links dt{color:var(--muted);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;padding-top:.2em}
+.links dd{margin:0;font-family:var(--f-name);min-width:0}
+.back .years-small{position:absolute;top:12px;right:16px;font-family:var(--f-year);font-weight:700;color:var(--muted);font-size:.85rem}
+
+.done{background:var(--card);border-radius:6px;padding:24px 22px;display:flex;flex-direction:column;gap:12px;
+  box-shadow:0 1px 2px rgba(0,0,0,.12),0 8px 24px rgba(20,30,50,.12)}
+.done h2{font-family:var(--f-name);font-weight:600;font-size:1.35rem;margin:0}
+.done p{margin:0;line-height:1.55;color:var(--muted);max-width:60ch}
+
+.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+button.btn{font:500 .95rem var(--f-ui);padding:10px 18px;border-radius:6px;border:1px solid var(--rule);
+  background:var(--card);color:var(--ink);cursor:pointer;min-width:120px}
+button.btn:hover{border-color:var(--accent)}
+button.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);color:var(--card);border-color:var(--accent)}
+button.miss{border-color:var(--margin);color:var(--margin)}
+button.got{border-color:var(--good);color:var(--good)}
+button.link{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:.8rem;padding:4px}
+.keys{text-align:center;font-size:.78rem;color:var(--muted);margin:0}
+.confirm{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;font-size:.85rem}
+
+details{background:var(--card);border-radius:6px;padding:10px 14px;border:1px solid var(--rule)}
+summary{cursor:pointer;font-weight:500}
+.list{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--rule);white-space:nowrap}
+th{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+td.y{font-family:var(--f-year);font-variant-numeric:tabular-nums}
+td.st{color:var(--muted);font-size:.8rem}
+.practice{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.plabel{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.pbtns{display:flex;flex-wrap:wrap;gap:6px}
+button.pill{font:500 .85rem var(--f-ui);font-variant-numeric:tabular-nums;padding:6px 12px;border-radius:999px;
+  border:1px solid var(--rule);background:var(--card);color:var(--ink);cursor:pointer}
+button.pill:hover{border-color:var(--accent)}
+button.pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.pill[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--card)}
+.banner{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;
+  background:var(--chip);border-radius:6px;padding:8px 12px;font-size:.88rem;font-variant-numeric:tabular-nums}
+.note{font-size:.78rem;color:var(--muted);line-height:1.5;margin:0}
+@media (prefers-reduced-motion:reduce){.card{transition:none}}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-size:14px;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+@media (hover:none){.keys{display:none}}
+.backup{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.backup textarea{width:100%;min-height:90px;font:12px ui-monospace,monospace;padding:8px;border-radius:6px;border:1px solid var(--rule);background:var(--card);color:var(--ink)}
+.backup-msg{font-size:.82rem;color:var(--muted);text-align:center;width:100%}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Presidents of the United States</h1>
+    <span class="status" id="status"></span>
+  </header>
+
+  <div class="strip" id="strip" aria-label="Progress across all 47 presidencies, in order"></div>
+  <div class="legend">
+    <span><i></i>Not started</span>
+    <span><i style="background:var(--margin);border-color:var(--margin)"></i>Learning</span>
+    <span><i style="background:var(--lv1);border-color:var(--lv1)"></i>1 day</span>
+    <span><i style="background:var(--lv2);border-color:var(--lv2)"></i>3–7 days</span>
+    <span><i style="background:var(--lv3);border-color:var(--lv3)"></i>2 weeks</span>
+    <span><i style="background:var(--lv4);border-color:var(--lv4)"></i>Mastered</span>
+  </div>
+  <div class="stats" id="stats"></div>
+
+  <div class="practice">
+    <span class="plabel">Practice a group</span>
+    <div class="pbtns" id="pbtns"></div>
+  </div>
+  <div class="banner" id="banner" hidden>
+    <span id="bannerText"></span>
+    <button class="link" id="exitPractice">Back to daily review</button>
+  </div>
+
+  <section id="study">
+    <div class="stage">
+      <button class="card" id="card" aria-label="Flashcard. Activate to reveal the answer.">
+        <div class="face front">
+          <span class="tag">Who was president?</span>
+          <span class="lvl" id="fLvl"></span>
+          <div class="years" id="fYears"></div>
+          <span class="hint">tap to reveal</span>
+        </div>
+        <div class="face back">
+          <span class="tag">President</span>
+          <span class="years-small" id="bYears"></span>
+          <div class="body">
+            <div class="name" id="bName"></div>
+            <span class="party" id="bParty"></span>
+            <dl class="links">
+              <dt>Before</dt><dd id="bPrev"></dd>
+              <dt>After</dt><dd id="bNext"></dd>
+            </dl>
+          </div>
+        </div>
+      </button>
+    </div>
+  </section>
+
+  <section class="done" id="done" hidden>
+    <h2 id="doneTitle"></h2>
+    <p id="doneText"></p>
+    <div class="controls" style="justify-content:flex-start">
+      <button class="btn primary" id="addMore">Add next 5</button>
+      <button class="btn primary" id="again" hidden>Shuffle and go again</button>
+      <button class="btn" id="backDaily" hidden>Back to daily review</button>
+    </div>
+  </section>
+
+  <div class="controls" id="revealRow">
+    <button class="btn primary" id="reveal">Show answer</button>
+  </div>
+  <div class="controls" id="gradeRow" hidden>
+    <button class="btn miss" id="miss">Missed it</button>
+    <button class="btn got" id="got">Got it</button>
+  </div>
+  <p class="keys">Keys: Space shows the answer · 1 = missed · 2 = got it</p>
+
+  <details>
+    <summary>Full list and progress</summary>
+    <div class="list"><table>
+      <thead><tr><th>#</th><th>Years</th><th>President</th><th>Party</th><th>Next review</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+  </details>
+
+  <details id="backupBox">
+    <summary>Move progress to another device</summary>
+    <div class="backup" style="margin-top:10px">
+      <p class="note" style="width:100%">Progress lives on this device only. To move it, copy the backup code here and paste it into the app on the other device.</p>
+      <button class="btn" id="copyBackup">Copy backup code</button>
+      <textarea id="backupText" aria-label="Backup code" placeholder="Paste a backup code here to restore it"></textarea>
+      <button class="btn" id="restoreBackup">Restore from pasted code</button>
+      <div class="backup-msg" id="backupMsg" role="status"></div>
+    </div>
+  </details>
+
+  <div class="confirm" id="resetRow">
+    <button class="link" id="reset">Reset progress</button>
+  </div>
+
+  <p class="note">How it works: you start with the first 5 presidencies. A card you get right comes back after 1 day, then 3, 7, 16 and 35 days. A card you miss returns a few cards later and starts over. When nothing is due, add the next 5 in order until you have all 47. Cards are shuffled within each session. "Practice a group" runs through a range in random order any time, without changing the schedule. Progress is saved on this device. No account needed, and it works offline once loaded.</p>
+  <p class="note">Party labels follow the class reference sheet. Grover Cleveland has two cards (#22 and #24). Biden's end year and Trump's second term (#47) were added to the sheet's list.</p>
+</div>
+
+<script>
+const RAW=[
+["1789–1797","George Washington","No Party"],["1797–1801","John Adams","Federalist"],
+["1801–1809","Thomas Jefferson","Democratic-Republican"],["1809–1817","James Madison","Democratic-Republican"],
+["1817–1825","James Monroe","Democratic-Republican"],["1825–1829","John Quincy Adams","Democratic-Republican"],
+["1829–1837","Andrew Jackson","Democratic"],["1837–1841","Martin Van Buren","Democratic"],
+["1841","William Henry Harrison","Whig"],["1841–1845","John Tyler","Whig/No Party"],
+["1845–1849","James K. Polk","Democratic"],["1849–1850","Zachary Taylor","Whig"],
+["1850–1853","Millard Fillmore","Whig"],["1853–1857","Franklin Pierce","Democratic"],
+["1857–1861","James Buchanan","Democratic"],["1861–1865","Abraham Lincoln","Republican"],
+["1865–1869","Andrew Johnson","Democratic"],["1869–1877","Ulysses S. Grant","Republican"],
+["1877–1881","Rutherford B. Hayes","Republican"],["1881","James A. Garfield","Republican"],
+["1881–1885","Chester A. Arthur","Republican"],["1885–1889","Grover Cleveland","Democratic"],
+["1889–1893","Benjamin Harrison","Republican"],["1893–1897","Grover Cleveland","Democratic"],
+["1897–1901","William McKinley","Republican"],["1901–1909","Theodore Roosevelt","Republican"],
+["1909–1913","William Howard Taft","Republican"],["1913–1921","Woodrow Wilson","Democratic"],
+["1921–1923","Warren G. Harding","Republican"],["1923–1929","Calvin Coolidge","Republican"],
+["1929–1933","Herbert Hoover","Republican"],["1933–1945","Franklin D. Roosevelt","Democratic"],
+["1945–1953","Harry S. Truman","Democratic"],["1953–1961","Dwight D. Eisenhower","Republican"],
+["1961–1963","John F. Kennedy","Democratic"],["1963–1969","Lyndon B. Johnson","Democratic"],
+["1969–1974","Richard Nixon","Republican"],["1974–1977","Gerald Ford","Republican"],
+["1977–1981","Jimmy Carter","Democratic"],["1981–1989","Ronald Reagan","Republican"],
+["1989–1993","George H. W. Bush","Republican"],["1993–2001","Bill Clinton","Democratic"],
+["2001–2009","George W. Bush","Republican"],["2009–2017","Barack Obama","Democratic"],
+["2017–2021","Donald Trump","Republican"],["2021–2025","Joe Biden","Democratic"],
+["2025–present","Donald Trump","Republican"]];
+const P=RAW.map((r,i,a)=>({n:i+1,years:r[0],name:r[1],party:r[2],
+  prev:i?`${a[i-1][1]} (#${i})`:"None (first president)",
+  next:i<a.length-1?`${a[i+1][1]} (#${i+2})`:"None yet (in office)"}));
+const N=P.length, BATCH=5;
+// box 0 = learning; boxes 1..5 wait INTERVAL[box] days after a correct answer
+const INTERVAL=[0,1,3,7,16,35];
+const LS_KEY="presidents-srs-v1";
+const DAY=86400000;
+
+const $=id=>document.getElementById(id);
+const startOfToday=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()};
+const dueAfter=days=>startOfToday()+days*DAY+3*3600000; // 3am local on that day
+
+function freshState(){return {unlocked:0,cards:{},updatedAt:0}}
+let S=freshState();
+let queue=[], current=null, revealed=false, sessionDone=0;
+let store=null; // {save(state)}
+
+function unlock(k){
+  const from=S.unlocked, to=Math.min(N,from+k);
+  for(let i=from;i<to;i++) S.cards[i]={box:0,due:0,seen:0};
+  S.unlocked=to;
+}
+function isDue(i){const c=S.cards[i];return c && c.due<=Date.now()}
+function buildQueue(){
+  const due=[];for(let i=0;i<S.unlocked;i++) if(isDue(i)) due.push(i);
+  // learning cards in order (new material reads chronologically), review cards shuffled
+  // reviews first, then learning cards; both shuffled so the order isn't memorized
+  queue=[...shuffle(due.filter(i=>S.cards[i].box>0)),...shuffle(due.filter(i=>S.cards[i].box===0))];
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+// ---- practice mode: a shuffled run through a range; does not change the review schedule ----
+let mode="srs", practice=null;
+const RANGES=[[1,10],[11,20],[21,30],[31,40],[41,47]];
+function startPractice(lo,hi){
+  mode="practice";
+  const idx=[];for(let i=lo-1;i<hi;i++)idx.push(i);
+  practice={lo,hi,total:idx.length,right:0,missed:new Set()};
+  queue=shuffle(idx); next();
+}
+function exitPractice(){mode="srs";practice=null;buildQueue();next()}
+
+function grade(ok){
+  const i=current;
+  if(mode==="practice"){
+    if(ok){if(!practice.missed.has(i))practice.right++}
+    else{practice.missed.add(i);queue.splice(Math.min(3,queue.length),0,i)}
+    next();return;
+  }
+  const c=S.cards[i]; c.seen=(c.seen||0)+1;
+  if(ok){
+    c.box=Math.min(INTERVAL.length-1,c.box+1);
+    c.due=dueAfter(INTERVAL[c.box]);
+    sessionDone++;
+  }else{
+    c.box=0; c.due=0;
+    queue.splice(Math.min(3,queue.length),0,i); // try again a few cards later
+  }
+  S.updatedAt=Date.now();
+  persist();
+  next();
+}
+function next(){
+  current=queue.length?queue.shift():null;
+  revealed=false;
+  // first visit: start with the first batch (no timestamp, so saved progress from another device wins)
+  if(mode==="srs" && current===null && S.unlocked===0){unlock(BATCH);buildQueue();current=queue.shift()??null}
+  render();
+}
+function levelClass(i){
+  const c=S.cards[i]; if(!c) return "";
+  if(c.box===0) return "l0";
+  if(c.box===1) return "l1";
+  if(c.box<=3) return "l2";
+  if(c.box===4) return "l3";
+  return "l4";
+}
+function levelText(c){
+  if(!c) return "Not started";
+  if(c.box===0) return c.seen?"Learning":"New";
+  return ["","1-day","3-day","7-day","16-day","35-day"][c.box]+" card";
+}
+function fmtDue(c){
+  if(!c) return "—";
+  if(c.due<=Date.now()) return "Now";
+  const days=Math.round((c.due-startOfToday())/DAY);
+  if(days<=1) return "Tomorrow";
+  return new Date(c.due).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+}
+function render(){
+  // strip
+  $("strip").innerHTML=P.map((p,i)=>`<div class="cell ${levelClass(i)}${i===current?" now":""}" title="#${p.n} ${p.years}"></div>`).join("");
+  // stats
+  let mastered=0,learning=0,dueTomorrow=0;const tmr=dueAfter(1);
+  for(let i=0;i<S.unlocked;i++){const c=S.cards[i];if(c.box>=4)mastered++;if(c.box===0)learning++;if(c.due>Date.now()&&c.due<=tmr)dueTomorrow++}
+  const left=(current!==null?1:0)+queue.length;
+  $("stats").innerHTML=`<span>Studying <b>${S.unlocked}</b> of ${N}</span><span>Due now <b>${left}</b></span><span>Mastered <b>${mastered}</b></span>`;
+  $("status").textContent=sessionDone?`${sessionDone} reviewed this session`:"";
+  // practice controls
+  $("pbtns").innerHTML=RANGES.map(([a,b])=>{
+    const on=mode==="practice"&&practice.lo===a&&practice.hi===b;
+    return `<button class="pill" data-lo="${a}" data-hi="${b}" aria-pressed="${on}">#${a}–${b}</button>`}).join("")
+    +`<button class="pill" data-lo="1" data-hi="${N}" aria-pressed="${mode==="practice"&&practice.lo===1&&practice.hi===N}">All 47</button>`;
+  $("banner").hidden=mode!=="practice";
+  if(mode==="practice"){
+    const left=(current!==null?1:0)+queue.length;
+    $("bannerText").textContent=`Practicing #${practice.lo}–${practice.hi} · ${left} left · doesn't change your review schedule`;
+  }
+
+  const studying=current!==null;
+  $("study").hidden=!studying; $("revealRow").hidden=!studying||revealed; $("gradeRow").hidden=!studying||!revealed;
+  $("done").hidden=studying;
+  if(studying){
+    const p=P[current], c=S.cards[current];
+    $("fYears").textContent=p.years; $("bYears").textContent=p.years;
+    const lv=$("fLvl"); lv.textContent=levelText(c); lv.className="lvl"+(c&&c.box===0?" new":"");
+    $("bName").innerHTML=`<span class="ord">#${p.n}</span>`; $("bName").append(p.name);
+    const pe=$("bParty"); pe.textContent=p.party; pe.className="party "+(p.party==="Republican"?"rep":p.party==="Democratic"?"dem":"");
+    $("bPrev").textContent=p.prev; $("bNext").textContent=p.next;
+    $("card").classList.toggle("flipped",revealed);
+  }else if(mode==="practice"){
+    const m=practice.missed.size;
+    $("doneTitle").textContent=`Practice done: ${practice.right} of ${practice.total} right the first time`;
+    $("doneText").textContent=m?`Missed at least once: ${[...practice.missed].sort((a,b)=>a-b).map(i=>`#${i+1} ${P[i].name}`).join(", ")}.`
+      :"A clean run. Shuffle and go again, or head back to your daily review.";
+    $("addMore").hidden=true; $("again").hidden=false; $("backDaily").hidden=false;
+  }else{
+    $("again").hidden=true; $("backDaily").hidden=true;
+    const remaining=N-S.unlocked;
+    if(remaining>0){
+      const a=S.unlocked+1,b=Math.min(N,S.unlocked+BATCH);
+      $("doneTitle").textContent="Nothing due right now";
+      $("doneText").textContent=`You're studying presidencies #1–#${S.unlocked}. ${dueTomorrow?dueTomorrow+" card"+(dueTomorrow>1?"s come":" comes")+" back tomorrow. ":""}Add #${a}–#${b} to keep building, or stop here for today.`;
+      $("addMore").hidden=false; $("addMore").textContent=`Add #${a}–#${b}`;
+    }else{
+      $("doneTitle").textContent=mastered===N?"All 47 mastered":"All caught up";
+      $("doneText").textContent=mastered===N?"Every card is on its longest interval. Reviews will keep coming back occasionally to keep them fresh."
+        :`All 47 presidencies are in rotation. ${dueTomorrow?dueTomorrow+" card"+(dueTomorrow>1?"s come":" comes")+" back tomorrow.":"Come back when cards are due."}`;
+      $("addMore").hidden=true;
+    }
+  }
+  // table
+  $("tbody").innerHTML=P.map((p,i)=>{const c=S.cards[i];
+    return `<tr><td>${p.n}</td><td class="y">${p.years}</td><td>${p.name}</td><td>${p.party}</td><td class="st">${c?fmtDue(c):"Not started"}</td></tr>`}).join("");
+}
+
+// ---- persistence: this device only ----
+function lsLoad(){try{const s=JSON.parse(localStorage.getItem(LS_KEY));return s&&s.cards?s:null}catch(e){return null}}
+function persist(){try{localStorage.setItem(LS_KEY,JSON.stringify(S))}catch(e){}}
+function adopt(s){
+  if(!s||!s.cards||typeof s.unlocked!=="number") return false;
+  S={unlocked:Math.max(0,Math.min(N,s.unlocked|0)),cards:s.cards,updatedAt:s.updatedAt||0};
+  return true;
+}
+
+// ---- controls ----
+function reveal(){if(current===null||revealed)return;revealed=true;render();$("got").focus({preventScroll:true})}
+$("card").onclick=()=>{if(!revealed)reveal()};
+$("reveal").onclick=reveal;
+$("got").onclick=()=>grade(true);
+$("miss").onclick=()=>grade(false);
+$("pbtns").onclick=e=>{const b=e.target.closest("button[data-lo]");if(b)startPractice(+b.dataset.lo,+b.dataset.hi)};
+$("again").onclick=()=>startPractice(practice.lo,practice.hi);
+$("backDaily").onclick=exitPractice;
+$("exitPractice").onclick=exitPractice;
+$("addMore").onclick=()=>{unlock(BATCH);S.updatedAt=Date.now();persist();buildQueue();next()};
+document.addEventListener("keydown",e=>{
+  if(e.target.closest("summary,input"))return;
+  if(current===null)return;
+  if(!revealed&&(e.key===" "||e.key==="Enter")){e.preventDefault();reveal()}
+  else if(revealed&&e.key==="1"){grade(false)}
+  else if(revealed&&e.key==="2"){grade(true)}
+});
+function restoreReset(){$("resetRow").innerHTML='<button class="link" id="reset">Reset progress</button>';bindReset()}
+function bindReset(){$("reset").onclick=()=>{
+  $("resetRow").innerHTML='<span>Erase all progress and start over?</span><button class="btn miss" id="resetYes">Erase progress</button><button class="btn" id="resetNo">Keep it</button>';
+  $("resetNo").onclick=restoreReset;
+  $("resetYes").onclick=()=>{S=freshState();unlock(BATCH);S.updatedAt=Date.now();sessionDone=0;persist();restoreReset();buildQueue();next()};
+}}
+bindReset();
+
+// ---- backup / restore ----
+$("copyBackup").onclick=async()=>{
+  const code=btoa(unescape(encodeURIComponent(JSON.stringify(S))));
+  $("backupText").value=code;
+  try{await navigator.clipboard.writeText(code);$("backupMsg").textContent="Copied. Paste it into the app on the other device."}
+  catch(e){$("backupText").select();$("backupMsg").textContent="Select the code above and copy it."}
+};
+$("restoreBackup").onclick=()=>{
+  try{
+    const s=JSON.parse(decodeURIComponent(escape(atob($("backupText").value.trim()))));
+    if(!adopt(s)) throw 0;
+    persist(); mode="srs"; practice=null; buildQueue(); current=null; next();
+    $("backupMsg").textContent="Progress restored.";
+  }catch(e){$("backupMsg").textContent="That code didn't work. Copy the whole code and try again."}
+};
+
+// ---- boot ----
+adopt(lsLoad());
+buildQueue(); next();
+if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().catch(()=>{})}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+</script>
+
+</body>
+</html>
