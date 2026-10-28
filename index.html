@@ -128,6 +128,21 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;font-size:14px;-webkit-tap-highlight-color:transparent}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+.plan{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.plan-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.plan-sum{font-size:.88rem;font-weight:500;min-width:0}
+.days{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(48px,1fr));gap:6px}
+.days li{border:1px solid var(--rule);border-radius:5px;padding:6px 2px;min-width:0;text-align:center;display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
+.days .dw{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.days .dr{font-size:.82rem;font-weight:600}
+.days .ds{font-size:.68rem;color:var(--muted)}
+.days li.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.days li.today .dw{color:var(--accent);font-weight:600}
+.days li.past{opacity:.6}
+.days li.test{border-style:dashed}
+.plan-edit{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
+.plan-edit input{font:inherit;font-size:.9rem;padding:4px 6px;border-radius:5px;border:1px solid var(--rule);background:var(--desk);color:var(--ink)}
+.plan-msg{width:100%}
 img{max-width:100%}
 @media (hover:none){.keys{display:none}}
 .backup{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
@@ -146,12 +161,26 @@ img{max-width:100%}
   <div class="legend">
     <span><i></i>Not started</span>
     <span><i style="background:var(--margin);border-color:var(--margin)"></i>Learning</span>
-    <span><i style="background:var(--lv1);border-color:var(--lv1)"></i>1 day</span>
-    <span><i style="background:var(--lv2);border-color:var(--lv2)"></i>3–7 days</span>
-    <span><i style="background:var(--lv3);border-color:var(--lv3)"></i>2 weeks</span>
+    <span><i style="background:var(--lv1);border-color:var(--lv1)"></i>Right once</span>
+    <span><i style="background:var(--lv2);border-color:var(--lv2)"></i>Right 2–3×</span>
+    <span><i style="background:var(--lv3);border-color:var(--lv3)"></i>Right 4×</span>
     <span><i style="background:var(--lv4);border-color:var(--lv4)"></i>Mastered</span>
   </div>
   <div class="stats" id="stats"></div>
+
+  <section class="plan" id="plan" aria-labelledby="planLabel">
+    <div class="plan-head">
+      <span class="plabel" id="planLabel">Test plan</span>
+      <span class="plan-sum" id="planSummary"></span>
+    </div>
+    <ol class="days" id="planDays"></ol>
+    <div class="plan-edit">
+      <label for="testDate" id="testDateLabel">Test date</label>
+      <input type="date" id="testDate">
+      <button class="link" id="planToggle">Turn off plan</button>
+      <span class="plan-msg" id="planMsg" role="status"></span>
+    </div>
+  </section>
 
   <div class="practice">
     <span class="plabel">Practice a group</span>
@@ -229,7 +258,7 @@ img{max-width:100%}
     <button class="link" id="reset">Reset progress</button>
   </div>
 
-  <p class="note">How it works: you start with the first 5 presidencies. A card you get right comes back after 1 day, then 3, 7, 16 and 35 days. A card you miss returns a few cards later and starts over. When nothing is due, add the next 5 in order until you have all 47. Cards are shuffled within each session. "Practice a group" runs through a range in random order any time, without changing the schedule. Progress is saved on this device. No account needed, and it works offline once loaded.</p>
+  <p class="note">How it works: you start with the first 5 presidencies. A card you get right comes back after 1 day, then 3, 7, 16 and 35 days. A card you miss returns a few cards later and starts over. When nothing is due, add the next 5 in order until you have all 47. With a test date set, the app spreads all 47 over the days before the test instead, keeps review gaps short, and saves the last day for reviewing every card. Cards are shuffled within each session. "Practice a group" runs through a range in random order any time, without changing the schedule. Progress is saved on this device. No account needed, and it works offline once loaded.</p>
   <p class="note">Party labels follow the class reference sheet. Grover Cleveland has two cards (#22 and #24). Biden's end year and Trump's second term (#47) were added to the sheet's list.</p>
 </div>
 
@@ -268,11 +297,48 @@ const INTERVAL=[0,1,3,7,16,35];
 const LS_KEY="presidents-srs-v1";
 const DAY=86400000;
 
-const $=id=>document.getElementById(id);
-const startOfToday=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()};
-const dueAfter=days=>startOfToday()+days*DAY+3*3600000; // 3am local on that day
+// Test plan: new cards spread over the days from `start` up to two days before `test`;
+// the day before the test is review only. Gaps are short and capped so every card
+// comes back on review day.
+const DEFAULT_PLAN={start:"2026-10-28",test:"2026-11-02"};
+const CRAM=[0,1,1,2,2,3];
 
-function freshState(){return {unlocked:0,cards:{},updatedAt:0}}
+const $=id=>document.getElementById(id);
+// calendar arithmetic via Date fields, so daylight-saving changes don't shift days
+const addDays=(t,n)=>{const d=new Date(t);d.setDate(d.getDate()+n);d.setHours(0,0,0,0);return d.getTime()};
+const startOfToday=()=>addDays(Date.now(),0);
+const at3=t=>t+3*3600000; // a day "starts" at 3am, so late-night study counts for that night
+const dueAfter=days=>at3(addDays(startOfToday(),days));
+const parseDay=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d).getTime()};
+const isoDay=t=>{const d=new Date(t);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+const daysBetween=(a,b)=>Math.round((b-a)/DAY);
+// the study "day" rolls over at 3am
+const studyToday=()=>addDays(Date.now()-3*3600000,0);
+
+function planInfo(){
+  const p=S.plan; if(!p) return null;
+  const start=parseDay(p.start), test=parseDay(p.test), review=addDays(test,-1);
+  const introDays=Math.max(1,daysBetween(start,review));
+  const perDay=Math.ceil(N/introDays);
+  const today=studyToday();
+  const idx=daysBetween(start,today);
+  const target=today>=review?N:Math.min(N,perDay*(Math.max(0,idx)+1));
+  return {start,test,review,introDays,perDay,today,idx,target,active:today<=test};
+}
+// latest a card may be scheduled: review day, then test morning; no cap from test day on
+function planCap(pi){return pi.today<pi.review?at3(pi.review):pi.today<pi.test?at3(pi.test):Infinity}
+function ensurePlanUnlock(){
+  const pi=planInfo();
+  if(!pi||!pi.active) return;
+  let changed=false;
+  if(S.unlocked<pi.target){unlock(pi.target-S.unlocked);changed=true}
+  // pull any card scheduled past the cap back in, so everything is seen on review day
+  const cap=planCap(pi);
+  for(let i=0;i<S.unlocked;i++){const c=S.cards[i];if(c.due>cap){c.due=cap;changed=true}}
+  if(changed){S.updatedAt=Date.now();persist()}
+}
+
+function freshState(){return {unlocked:0,cards:{},updatedAt:0,plan:{...DEFAULT_PLAN}}}
 let S=freshState();
 let queue=[], current=null, revealed=false, sessionDone=0;
 let store=null; // {save(state)}
@@ -284,6 +350,7 @@ function unlock(k){
 }
 function isDue(i){const c=S.cards[i];return c && c.due<=Date.now()}
 function buildQueue(){
+  ensurePlanUnlock();
   const due=[];for(let i=0;i<S.unlocked;i++) if(isDue(i)) due.push(i);
   // learning cards in order (new material reads chronologically), review cards shuffled
   // reviews first, then learning cards; both shuffled so the order isn't memorized
@@ -312,7 +379,12 @@ function grade(ok){
   const c=S.cards[i]; c.seen=(c.seen||0)+1;
   if(ok){
     c.box=Math.min(INTERVAL.length-1,c.box+1);
-    c.due=dueAfter(INTERVAL[c.box]);
+    const pi=planInfo();
+    if(pi&&pi.active){
+      // before review day: come back no later than review day; on review day: test morning
+      const cap=planCap(pi);
+      c.due=Math.min(dueAfter(pi.today<pi.test?CRAM[c.box]:INTERVAL[c.box]),cap);
+    }else c.due=dueAfter(INTERVAL[c.box]);
     sessionDone++;
   }else{
     c.box=0; c.due=0;
@@ -326,7 +398,7 @@ function next(){
   current=queue.length?queue.shift():null;
   revealed=false;
   // first visit: start with the first batch (no timestamp, so saved progress from another device wins)
-  if(mode==="srs" && current===null && S.unlocked===0){unlock(BATCH);buildQueue();current=queue.shift()??null}
+  if(mode==="srs" && current===null && S.unlocked===0 && !planInfo()?.active){unlock(BATCH);buildQueue();current=queue.shift()??null}
   render();
 }
 function levelClass(i){
@@ -340,7 +412,7 @@ function levelClass(i){
 function levelText(c){
   if(!c) return "Not started";
   if(c.box===0) return c.seen?"Learning":"New";
-  return ["","1-day","3-day","7-day","16-day","35-day"][c.box]+" card";
+  return c.box>=5?"Mastered":`Right ${c.box}×`;
 }
 function fmtDue(c){
   if(!c) return "—";
@@ -389,7 +461,28 @@ function render(){
   }else{
     $("again").hidden=true; $("backDaily").hidden=true;
     const remaining=N-S.unlocked;
-    if(remaining>0){
+    const pi=planInfo();
+    if(pi&&pi.active){
+      const a=S.unlocked+1,b=Math.min(N,S.unlocked+pi.perDay);
+      const fmt=t=>new Date(t).toLocaleDateString(undefined,{weekday:"long"});
+      if(pi.today>=pi.test){
+        $("doneTitle").textContent="Test day";
+        $("doneText").textContent="Everything is reviewed. Good luck! Use “Practice a group” for a last run-through if you want one.";
+        $("addMore").hidden=true;
+      }else if(pi.today>=pi.review){
+        $("doneTitle").textContent="Review day done";
+        $("doneText").textContent=`All 47 have been reviewed. A final quick pass will be ready ${fmt(pi.test)} morning. Use “Practice a group” to drill any range again tonight.`;
+        $("addMore").hidden=true;
+      }else if(remaining>0){
+        $("doneTitle").textContent="Today's cards are done";
+        $("doneText").textContent=`Tomorrow brings #${a}–#${b} plus a review of earlier cards. You can get ahead now if you have time.`;
+        $("addMore").hidden=false; $("addMore").textContent=`Get ahead: add #${a}–#${b}`;
+      }else{
+        $("doneTitle").textContent="All 47 are in rotation";
+        $("doneText").textContent=`Nothing else is due today. ${fmt(pi.review)} is review day: every card comes back once.`;
+        $("addMore").hidden=true;
+      }
+    }else if(remaining>0){
       const a=S.unlocked+1,b=Math.min(N,S.unlocked+BATCH);
       $("doneTitle").textContent="Nothing due right now";
       $("doneText").textContent=`You're studying presidencies #1–#${S.unlocked}. ${dueTomorrow?dueTomorrow+" card"+(dueTomorrow>1?"s come":" comes")+" back tomorrow. ":""}Add #${a}–#${b} to keep building, or stop here for today.`;
@@ -401,17 +494,60 @@ function render(){
       $("addMore").hidden=true;
     }
   }
+  renderPlan();
   // table
   $("tbody").innerHTML=P.map((p,i)=>{const c=S.cards[i];
     return `<tr><td>${p.n}</td><td class="y">${p.years}</td><td>${p.name}</td><td>${p.party}</td><td class="st">${c?fmtDue(c):"Not started"}</td></tr>`}).join("");
 }
+
+function renderPlan(){
+  const pi=planInfo();
+  const wd=t=>new Date(t).toLocaleDateString(undefined,{weekday:"short"});
+  const md=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  $("planDays").hidden=!pi; $("planToggle").textContent=pi?"Turn off plan":"";
+  $("planToggle").hidden=!pi;
+  $("testDateLabel").textContent=pi?"Test date":"Set a test date to spread all 47 over the days before it:";
+  if(document.activeElement!==$("testDate")) $("testDate").value=S.plan?S.plan.test:"";
+  if(!pi){$("planSummary").textContent="";return}
+  const fullDate=new Date(pi.test).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+  if(!pi.active){$("planSummary").textContent=`Test was ${fullDate}. Regular review has resumed.`;$("planDays").innerHTML="";return}
+  const days=[];
+  for(let k=0;k<pi.introDays;k++){
+    const t=addDays(pi.start,k),a=k*pi.perDay+1,b=Math.min(N,(k+1)*pi.perDay);
+    if(a>N) break;
+    days.push({t,range:a===b?`#${a}`:`#${a}–${b}`,sub:"new + review"});
+  }
+  days.push({t:pi.review,range:"All 47",sub:"review only"});
+  days.push({t:pi.test,range:"Test",sub:md(pi.test),test:true});
+  $("planDays").innerHTML=days.map(d=>{
+    const cls=d.t===pi.today?"today":d.t<pi.today?"past":"";
+    return `<li class="${cls}${d.test?" test":""}"><span class="dw">${d.t===pi.today?"Today":wd(d.t)}</span><span class="dr">${d.range}</span><span class="ds">${d.sub}</span></li>`}).join("");
+  let sum;
+  if(pi.today>=pi.test) sum="Test day. Good luck!";
+  else if(pi.today>=pi.review) sum="Today: review all 47";
+  else if(pi.today<pi.start) sum=`Starts ${wd(pi.start)}. You can begin tonight.`;
+  else{const d=days[Math.min(pi.idx,days.length-3)];sum=`Today: learn ${d.range} and review`}
+  $("planSummary").textContent=`${sum} · Test ${wd(pi.test)} ${md(pi.test)}`;
+}
+$("testDate").onchange=e=>{
+  const v=e.target.value; if(!v) return;
+  const t=parseDay(v), today=studyToday();
+  if(daysBetween(today,t)<2){$("planMsg").textContent="Pick a date at least two days away, so there's a day to learn and a day to review.";return}
+  $("planMsg").textContent="";
+  const start=S.plan&&parseDay(S.plan.start)<=today&&t>parseDay(S.plan.test)?S.plan.start:isoDay(today);
+  S.plan={start, test:v}; S.updatedAt=Date.now(); persist();
+  if(mode==="srs"){buildQueue();current=null;next()}else render();
+};
+$("planToggle").onclick=()=>{S.plan=null;S.updatedAt=Date.now();persist();$("planMsg").textContent="Plan off. Set a test date any time to turn it back on.";
+  if(mode==="srs"){buildQueue();current=null;next()}else render()};
 
 // ---- persistence: this device only ----
 function lsLoad(){try{const s=JSON.parse(localStorage.getItem(LS_KEY));return s&&s.cards?s:null}catch(e){return null}}
 function persist(){try{localStorage.setItem(LS_KEY,JSON.stringify(S))}catch(e){}}
 function adopt(s){
   if(!s||!s.cards||typeof s.unlocked!=="number") return false;
-  S={unlocked:Math.max(0,Math.min(N,s.unlocked|0)),cards:s.cards,updatedAt:s.updatedAt||0};
+  S={unlocked:Math.max(0,Math.min(N,s.unlocked|0)),cards:s.cards,updatedAt:s.updatedAt||0,
+     plan:("plan" in s)?s.plan:{...DEFAULT_PLAN}};
   return true;
 }
 
@@ -425,7 +561,7 @@ $("pbtns").onclick=e=>{const b=e.target.closest("button[data-lo]");if(b)startPra
 $("again").onclick=()=>startPractice(practice.lo,practice.hi);
 $("backDaily").onclick=exitPractice;
 $("exitPractice").onclick=exitPractice;
-$("addMore").onclick=()=>{unlock(BATCH);S.updatedAt=Date.now();persist();buildQueue();next()};
+$("addMore").onclick=()=>{const pi=planInfo();unlock(pi&&pi.active?pi.perDay:BATCH);S.updatedAt=Date.now();persist();buildQueue();next()};
 document.addEventListener("keydown",e=>{
   if(e.target.closest("summary,input"))return;
   if(current===null)return;
@@ -437,7 +573,7 @@ function restoreReset(){$("resetRow").innerHTML='<button class="link" id="reset"
 function bindReset(){$("reset").onclick=()=>{
   $("resetRow").innerHTML='<span>Erase all progress and start over?</span><button class="btn miss" id="resetYes">Erase progress</button><button class="btn" id="resetNo">Keep it</button>';
   $("resetNo").onclick=restoreReset;
-  $("resetYes").onclick=()=>{S=freshState();unlock(BATCH);S.updatedAt=Date.now();sessionDone=0;persist();restoreReset();buildQueue();next()};
+  $("resetYes").onclick=()=>{const keep=S.plan;S=freshState();S.plan=keep;if(!planInfo()?.active)unlock(BATCH);S.updatedAt=Date.now();sessionDone=0;persist();restoreReset();buildQueue();next()};
 }}
 bindReset();
 
