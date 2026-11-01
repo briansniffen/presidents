@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Presidents</title>
-<meta name="description" content="Spaced-repetition flashcards for the presidents of the United States.">
+<meta name="description" content="In-order review flashcards for the presidents of the United States.">
 <meta name="theme-color" content="#24427a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -16,12 +16,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Layout: one ruled index card on a desk, grade buttons beneath, a 47-cell progress strip above */
+/* Layout: a 47-cell progress strip, one ruled index card, three grade buttons beneath */
 :root{
   --desk:#e9ecf1; --card:#ffffff; --ink:#1b2333; --muted:#5f6a7d;
   --rule:#b9cbe6; --margin:#d9534f; --accent:#24427a; --chip:#eef2f8;
-  --rep:#b23a3a; --dem:#2c5ba8; --other:#6b6f7a; --good:#2f7d4f;
-  --lv1:#c9d6ea; --lv2:#8ea8d3; --lv3:#4f74b3; --lv4:#24427a;
+  --rep:#b23a3a; --dem:#2c5ba8; --other:#6b6f7a;
+  --known:#2f7d4f; --shaky:#c98a12; --missed:#d9534f;
   --f-year:"Zilla Slab", Rockwell, "Courier New", serif;
   --f-name:"Source Serif 4", Georgia, serif;
   --f-ui:"IBM Plex Sans", system-ui, sans-serif;
@@ -29,38 +29,51 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --desk:#12161e; --card:#1d2330; --ink:#e8ecf3; --muted:#9aa5b8;
   --rule:#2e3a52; --margin:#c75a54; --accent:#8fb0ea; --chip:#262e3e;
-  --rep:#e07a7a; --dem:#82a8ec; --other:#a6abb6; --good:#6cc28f;
-  --lv1:#2b3a57; --lv2:#3e5f99; --lv3:#5f87cf; --lv4:#a3c0f2; color-scheme:dark}}
+  --rep:#e07a7a; --dem:#82a8ec; --other:#a6abb6;
+  --known:#6cc28f; --shaky:#e2b04a; --missed:#e07a7a; color-scheme:dark}}
 :root[data-theme="dark"]{
   --desk:#12161e; --card:#1d2330; --ink:#e8ecf3; --muted:#9aa5b8;
   --rule:#2e3a52; --margin:#c75a54; --accent:#8fb0ea; --chip:#262e3e;
-  --rep:#e07a7a; --dem:#82a8ec; --other:#a6abb6; --good:#6cc28f;
-  --lv1:#2b3a57; --lv2:#3e5f99; --lv3:#5f87cf; --lv4:#a3c0f2; color-scheme:dark}
-body{background:var(--desk);color:var(--ink);font-family:var(--f-ui)}
-.wrap{max-width:640px;margin:0 auto;padding-top:calc(20px + env(safe-area-inset-top,0px));padding-bottom:calc(40px + env(safe-area-inset-bottom,0px));
+  --rep:#e07a7a; --dem:#82a8ec; --other:#a6abb6;
+  --known:#6cc28f; --shaky:#e2b04a; --missed:#e07a7a; color-scheme:dark}
+html{-webkit-text-size-adjust:100%}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;font-size:14px;background:var(--desk);color:var(--ink);font-family:var(--f-ui);-webkit-tap-highlight-color:transparent}
+.wrap{max-width:640px;margin:0 auto;
+  padding-top:calc(20px + env(safe-area-inset-top,0px));padding-bottom:calc(40px + env(safe-area-inset-bottom,0px));
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  display:flex;flex-direction:column;gap:16px}
+  display:flex;flex-direction:column;gap:14px}
 header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 h1{font-family:var(--f-name);font-weight:600;font-size:1.5rem;margin:0;text-wrap:balance}
-.status{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.undo{font-size:.85rem}
+
+.label{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.scope{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+button.pill{font:500 .85rem var(--f-ui);font-variant-numeric:tabular-nums;padding:6px 12px;border-radius:999px;
+  border:1px solid var(--rule);background:var(--card);color:var(--ink);cursor:pointer}
+button.pill:hover{border-color:var(--accent)}
+button.pill[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--card)}
+button.pill.trouble{border-color:var(--missed);color:var(--missed)}
+button.pill.trouble[aria-pressed="true"]{background:var(--missed);color:var(--card)}
 
 .strip{display:grid;grid-template-columns:repeat(47,1fr);gap:2px}
-.cell{height:16px;border-radius:2px;background:transparent;border:1px solid var(--rule)}
-.cell.l0{background:var(--margin);border-color:var(--margin);opacity:.75}
-.cell.l1{background:var(--lv1);border-color:var(--lv1)}
-.cell.l2{background:var(--lv2);border-color:var(--lv2)}
-.cell.l3{background:var(--lv3);border-color:var(--lv3)}
-.cell.l4{background:var(--lv4);border-color:var(--lv4)}
+.cell{height:16px;border-radius:2px;border:1px solid var(--rule);background:transparent}
+.cell.out{opacity:.25}
+.cell.known{background:var(--known);border-color:var(--known)}
+.cell.shaky{background:var(--shaky);border-color:var(--shaky)}
+.cell.missed{background:var(--missed);border-color:var(--missed)}
 .cell.now{outline:2px solid var(--ink);outline-offset:1px}
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.74rem;color:var(--muted)}
 .legend span{display:inline-flex;align-items:center;gap:5px}
 .legend i{width:10px;height:10px;border-radius:2px;display:inline-block;border:1px solid var(--rule)}
-.stats{display:flex;gap:18px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.stats b{color:var(--ink);font-weight:600}
+.round{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.9rem;font-variant-numeric:tabular-nums}
+.round b{font-weight:600}
+.round .sub{color:var(--muted)}
 
 .stage{perspective:1400px}
 .card{position:relative;width:100%;aspect-ratio:5/3;max-width:100%;cursor:pointer;
-  transform-style:preserve-3d;transition:transform .45s ease;border:none;padding:0;background:none;display:block;font:inherit}
+  transform-style:preserve-3d;transition:transform .4s ease;border:none;padding:0;background:none;display:block;font:inherit}
 .card.flipped{transform:rotateY(180deg)}
 .card:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:6px}
 .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
@@ -71,12 +84,12 @@ h1{font-family:var(--f-name);font-weight:600;font-size:1.5rem;margin:0;text-wrap
 .face::before{content:"";position:absolute;left:0;right:0;top:22%;height:2px;background:var(--margin);opacity:.8}
 .face.back{transform:rotateY(180deg)}
 .tag{position:absolute;top:12px;left:16px;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-.lvl{position:absolute;top:12px;right:16px;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.lvl.new{color:var(--margin);font-weight:600}
+.flag{position:absolute;top:12px;right:16px;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.flag.shaky{color:var(--shaky)}.flag.missed{color:var(--missed)}
 .hint{position:absolute;bottom:10px;right:14px;font-size:.72rem;color:var(--muted)}
 .front .years{margin:auto;font-family:var(--f-year);font-weight:700;font-size:clamp(2.4rem,11vw,4.6rem);
   font-variant-numeric:tabular-nums;letter-spacing:.01em;padding-top:8%}
-.back .body{padding:calc(22% + 14px) 22px 18px;display:flex;flex-direction:column;gap:10px;min-width:0;height:100%;box-sizing:border-box}
+.back .body{padding:calc(22% + 14px) 22px 18px;display:flex;flex-direction:column;gap:10px;min-width:0;height:100%}
 .name{font-family:var(--f-name);font-weight:600;font-size:clamp(1.35rem,5.4vw,2rem);line-height:1.15;text-wrap:balance}
 .ord{font-family:var(--f-year);font-weight:500;color:var(--muted);font-size:.8em;margin-right:.3em}
 .party{align-self:flex-start;font-size:.78rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
@@ -87,21 +100,28 @@ h1{font-family:var(--f-name);font-weight:600;font-size:1.5rem;margin:0;text-wrap
 .links dd{margin:0;font-family:var(--f-name);min-width:0}
 .back .years-small{position:absolute;top:12px;right:16px;font-family:var(--f-year);font-weight:700;color:var(--muted);font-size:.85rem}
 
-.done{background:var(--card);border-radius:6px;padding:24px 22px;display:flex;flex-direction:column;gap:12px;
+.panel{background:var(--card);border-radius:6px;padding:22px 20px;display:flex;flex-direction:column;gap:12px;
   box-shadow:0 1px 2px rgba(0,0,0,.12),0 8px 24px rgba(20,30,50,.12)}
-.done h2{font-family:var(--f-name);font-weight:600;font-size:1.35rem;margin:0}
-.done p{margin:0;line-height:1.55;color:var(--muted);max-width:60ch}
+.panel h2{font-family:var(--f-name);font-weight:600;font-size:1.35rem;margin:0;text-wrap:balance}
+.panel p{margin:0;line-height:1.55;color:var(--muted);max-width:60ch}
+.tally{display:flex;gap:16px;flex-wrap:wrap;font-variant-numeric:tabular-nums;font-size:.95rem}
+.tally span{display:inline-flex;align-items:center;gap:6px}
+.tally i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.names{margin:0;padding-left:1.2em;line-height:1.6;font-family:var(--f-name);font-size:.98rem}
 
 .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-button.btn{font:500 .95rem var(--f-ui);padding:10px 18px;border-radius:6px;border:1px solid var(--rule);
-  background:var(--card);color:var(--ink);cursor:pointer;min-width:120px}
+.panel .controls{justify-content:flex-start}
+button.btn{font:500 .95rem var(--f-ui);padding:12px 16px;border-radius:6px;border:1px solid var(--rule);
+  background:var(--card);color:var(--ink);cursor:pointer;min-width:100px;flex:1 1 0;max-width:200px}
 button.btn:hover{border-color:var(--accent)}
-button.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.btn:focus-visible,button.pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 button.primary{background:var(--accent);color:var(--card);border-color:var(--accent)}
-button.miss{border-color:var(--margin);color:var(--margin)}
-button.got{border-color:var(--good);color:var(--good)}
-button.link{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:.8rem;padding:4px}
+button.g-missed{border-color:var(--missed);color:var(--missed)}
+button.g-shaky{border-color:var(--shaky);color:var(--shaky)}
+button.g-known{border-color:var(--known);color:var(--known)}
+button.link{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:.82rem;padding:4px}
 .keys{text-align:center;font-size:.78rem;color:var(--muted);margin:0}
+@media (hover:none){.keys{display:none}}
 .confirm{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;font-size:.85rem}
 
 details{background:var(--card);border-radius:6px;padding:10px 14px;border:1px solid var(--rule)}
@@ -110,93 +130,37 @@ summary{cursor:pointer;font-weight:500}
 table{border-collapse:collapse;width:100%;font-size:.86rem}
 th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--rule);white-space:nowrap}
 th{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-td.y{font-family:var(--f-year);font-variant-numeric:tabular-nums}
-td.st{color:var(--muted);font-size:.8rem}
-.practice{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.plabel{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:4px}
-.pbtns{display:flex;flex-wrap:wrap;gap:6px}
-button.pill{font:500 .85rem var(--f-ui);font-variant-numeric:tabular-nums;padding:6px 12px;border-radius:999px;
-  border:1px solid var(--rule);background:var(--card);color:var(--ink);cursor:pointer}
-button.pill:hover{border-color:var(--accent)}
-button.pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-button.pill[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--card)}
-.banner{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;
-  background:var(--chip);border-radius:6px;padding:8px 12px;font-size:.88rem;font-variant-numeric:tabular-nums}
+td.y,td.num{font-variant-numeric:tabular-nums}
+td.y{font-family:var(--f-year)}
 .note{font-size:.78rem;color:var(--muted);line-height:1.5;margin:0}
 @media (prefers-reduced-motion:reduce){.card{transition:none}}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;font-size:14px;-webkit-tap-highlight-color:transparent}
-*{box-sizing:border-box}
-[hidden]{display:none!important}
-.plan{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
-.plan-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
-.plan-sum{font-size:.88rem;font-weight:500;min-width:0}
-.days{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(48px,1fr));gap:6px}
-.days li{border:1px solid var(--rule);border-radius:5px;padding:6px 2px;min-width:0;text-align:center;display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
-.days .dw{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.days .dr{font-size:.82rem;font-weight:600}
-.days .ds{font-size:.68rem;color:var(--muted)}
-.days li.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
-.days li.today .dw{color:var(--accent);font-weight:600}
-.days li.past{opacity:.6}
-.days li.test{border-style:dashed}
-.plan-edit{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
-.plan-edit input{font:inherit;font-size:.9rem;padding:4px 6px;border-radius:5px;border:1px solid var(--rule);background:var(--desk);color:var(--ink)}
-.plan-msg{width:100%}
-img{max-width:100%}
-@media (hover:none){.keys{display:none}}
-.backup{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-.backup textarea{width:100%;min-height:90px;font:12px ui-monospace,monospace;padding:8px;border-radius:6px;border:1px solid var(--rule);background:var(--card);color:var(--ink)}
-.backup-msg{font-size:.82rem;color:var(--muted);text-align:center;width:100%}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>Presidents of the United States</h1>
-    <span class="status" id="status"></span>
+    <button class="link undo" id="undo" hidden>Undo last answer</button>
   </header>
 
-  <div class="strip" id="strip" aria-label="Progress across all 47 presidencies, in order"></div>
+  <div class="scope" id="scope" aria-label="What to review"></div>
+
+  <div class="strip" id="strip" aria-label="Status of all 47 presidencies, in order"></div>
   <div class="legend">
-    <span><i></i>Not started</span>
-    <span><i style="background:var(--margin);border-color:var(--margin)"></i>Learning</span>
-    <span><i style="background:var(--lv1);border-color:var(--lv1)"></i>Right once</span>
-    <span><i style="background:var(--lv2);border-color:var(--lv2)"></i>Right 2–3×</span>
-    <span><i style="background:var(--lv3);border-color:var(--lv3)"></i>Right 4×</span>
-    <span><i style="background:var(--lv4);border-color:var(--lv4)"></i>Mastered</span>
+    <span><i></i>Not yet</span>
+    <span><i style="background:var(--known);border-color:var(--known)"></i>Knew it</span>
+    <span><i style="background:var(--shaky);border-color:var(--shaky)"></i>Shaky: once more</span>
+    <span><i style="background:var(--missed);border-color:var(--missed)"></i>Missed: twice more</span>
   </div>
-  <div class="stats" id="stats"></div>
 
-  <section class="plan" id="plan" aria-labelledby="planLabel">
-    <div class="plan-head">
-      <span class="plabel" id="planLabel">Test plan</span>
-      <span class="plan-sum" id="planSummary"></span>
-    </div>
-    <ol class="days" id="planDays"></ol>
-    <div class="plan-edit">
-      <label for="testDate" id="testDateLabel">Test date</label>
-      <input type="date" id="testDate">
-      <button class="link" id="planToggle">Turn off plan</button>
-      <span class="plan-msg" id="planMsg" role="status"></span>
-    </div>
-  </section>
-
-  <div class="practice">
-    <span class="plabel">Practice a group</span>
-    <div class="pbtns" id="pbtns"></div>
-  </div>
-  <div class="banner" id="banner" hidden>
-    <span id="bannerText"></span>
-    <button class="link" id="exitPractice">Back to daily review</button>
-  </div>
+  <div class="round" id="round"></div>
 
   <section id="study">
     <div class="stage">
       <button class="card" id="card" aria-label="Flashcard. Activate to reveal the answer.">
         <div class="face front">
           <span class="tag">Who was president?</span>
-          <span class="lvl" id="fLvl"></span>
+          <span class="flag" id="fFlag"></span>
           <div class="years" id="fYears"></div>
           <span class="hint">tap to reveal</span>
         </div>
@@ -216,13 +180,14 @@ img{max-width:100%}
     </div>
   </section>
 
-  <section class="done" id="done" hidden>
-    <h2 id="doneTitle"></h2>
-    <p id="doneText"></p>
-    <div class="controls" style="justify-content:flex-start">
-      <button class="btn primary" id="addMore">Add next 5</button>
-      <button class="btn primary" id="again" hidden>Shuffle and go again</button>
-      <button class="btn" id="backDaily" hidden>Back to daily review</button>
+  <section class="panel" id="panel" hidden>
+    <h2 id="pTitle"></h2>
+    <div class="tally" id="pTally"></div>
+    <p id="pText"></p>
+    <ol class="names" id="pNames" hidden></ol>
+    <div class="controls">
+      <button class="btn primary" id="pGo"></button>
+      <button class="btn" id="pAlt" hidden></button>
     </div>
   </section>
 
@@ -230,36 +195,26 @@ img{max-width:100%}
     <button class="btn primary" id="reveal">Show answer</button>
   </div>
   <div class="controls" id="gradeRow" hidden>
-    <button class="btn miss" id="miss">Missed it</button>
-    <button class="btn got" id="got">Got it</button>
+    <button class="btn g-missed" id="gMissed">Missed it</button>
+    <button class="btn g-shaky" id="gShaky">Shaky</button>
+    <button class="btn g-known" id="gKnown">Knew it</button>
   </div>
-  <p class="keys">Keys: Space shows the answer · 1 = missed · 2 = got it</p>
+  <p class="keys">Keys: Space shows the answer · 1 missed · 2 shaky · 3 knew it</p>
 
   <details>
-    <summary>Full list and progress</summary>
+    <summary>Full list and trouble spots</summary>
     <div class="list"><table>
-      <thead><tr><th>#</th><th>Years</th><th>President</th><th>Party</th><th>Next review</th></tr></thead>
+      <thead><tr><th>#</th><th>Years</th><th>President</th><th>Party</th><th>Missed</th><th>Shaky</th></tr></thead>
       <tbody id="tbody"></tbody>
     </table></div>
   </details>
 
-  <details id="backupBox">
-    <summary>Move progress to another device</summary>
-    <div class="backup" style="margin-top:10px">
-      <p class="note" style="width:100%">Progress lives on this device only. To move it, copy the backup code here and paste it into the app on the other device.</p>
-      <button class="btn" id="copyBackup">Copy backup code</button>
-      <textarea id="backupText" aria-label="Backup code" placeholder="Paste a backup code here to restore it"></textarea>
-      <button class="btn" id="restoreBackup">Restore from pasted code</button>
-      <div class="backup-msg" id="backupMsg" role="status"></div>
-    </div>
-  </details>
-
   <div class="confirm" id="resetRow">
-    <button class="link" id="reset">Reset progress</button>
+    <button class="link" id="reset">Clear trouble spots</button>
   </div>
 
-  <p class="note">How it works: you start with the first 5 presidencies. A card you get right comes back after 1 day, then 3, 7, 16 and 35 days. A card you miss returns a few cards later and starts over. When nothing is due, add the next 5 in order until you have all 47. With a test date set, the app spreads all 47 over the days before the test instead, keeps review gaps short, and saves the last day for reviewing every card. Cards are shuffled within each session. "Practice a group" runs through a range in random order any time, without changing the schedule. Progress is saved on this device. No account needed, and it works offline once loaded.</p>
-  <p class="note">Party labels follow the class reference sheet. Grover Cleveland has two cards (#22 and #24). Biden's end year and Trump's second term (#47) were added to the sheet's list.</p>
+  <p class="note">How it works: each review goes through the cards in order. Anything marked Shaky comes back once more, and anything Missed comes back until it's right twice. Repeats come back in sets: the card before it first, as a lead-in, then the one to work on, all in order, round after round, until every card is a Knew it. Trouble spots remember what's been missed or shaky in past reviews, so you can run just those. Everything is saved on this device; close the app and it picks up where you left off.</p>
+  <p class="note">Party labels follow the class reference sheet. Grover Cleveland has two cards (#22 and #24).</p>
 </div>
 
 <script>
@@ -291,314 +246,185 @@ const RAW=[
 const P=RAW.map((r,i,a)=>({n:i+1,years:r[0],name:r[1],party:r[2],
   prev:i?`${a[i-1][1]} (#${i})`:"None (first president)",
   next:i<a.length-1?`${a[i+1][1]} (#${i+2})`:"None yet (in office)"}));
-const N=P.length, BATCH=5;
-// box 0 = learning; boxes 1..5 wait INTERVAL[box] days after a correct answer
-const INTERVAL=[0,1,3,7,16,35];
-const LS_KEY="presidents-srs-v1";
-const DAY=86400000;
-
-// Test plan: new cards spread over the days from `start` up to two days before `test`;
-// the day before the test is review only. Gaps are short and capped so every card
-// comes back on review day.
-const DEFAULT_PLAN={start:"2026-10-28",test:"2026-11-02"};
-const CRAM=[0,1,1,2,2,3];
-
+const N=P.length;
+const SCOPES=[{id:"all",label:"All 47",lo:1,hi:47},{id:"1-10",label:"#1–10",lo:1,hi:10},{id:"11-20",label:"#11–20",lo:11,hi:20},
+  {id:"21-30",label:"#21–30",lo:21,hi:30},{id:"31-40",label:"#31–40",lo:31,hi:40},{id:"41-47",label:"#41–47",lo:41,hi:47}];
+// how many more correct answers a card needs after each grade
+const NEED={missed:2,shaky:1};
+const KEY="presidents-order-v1";
 const $=id=>document.getElementById(id);
-// calendar arithmetic via Date fields, so daylight-saving changes don't shift days
-const addDays=(t,n)=>{const d=new Date(t);d.setDate(d.getDate()+n);d.setHours(0,0,0,0);return d.getTime()};
-const startOfToday=()=>addDays(Date.now(),0);
-const at3=t=>t+3*3600000; // a day "starts" at 3am, so late-night study counts for that night
-const dueAfter=days=>at3(addDays(startOfToday(),days));
-const parseDay=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d).getTime()};
-const isoDay=t=>{const d=new Date(t);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
-const daysBetween=(a,b)=>Math.round((b-a)/DAY);
-// the study "day" rolls over at 3am
-const studyToday=()=>addDays(Date.now()-3*3600000,0);
 
-function planInfo(){
-  const p=S.plan; if(!p) return null;
-  const start=parseDay(p.start), test=parseDay(p.test), review=addDays(test,-1);
-  const introDays=Math.max(1,daysBetween(start,review));
-  const perDay=Math.ceil(N/introDays);
-  const today=studyToday();
-  const idx=daysBetween(start,today);
-  const target=today>=review?N:Math.min(N,perDay*(Math.max(0,idx)+1));
-  return {start,test,review,introDays,perDay,today,idx,target,active:today<=test};
-}
-// latest a card may be scheduled: review day, then test morning; no cap from test day on
-function planCap(pi){return pi.today<pi.review?at3(pi.review):pi.today<pi.test?at3(pi.test):Infinity}
-function ensurePlanUnlock(){
-  const pi=planInfo();
-  if(!pi||!pi.active) return;
-  let changed=false;
-  if(S.unlocked<pi.target){unlock(pi.target-S.unlocked);changed=true}
-  // pull any card scheduled past the cap back in, so everything is seen on review day
-  const cap=planCap(pi);
-  for(let i=0;i<S.unlocked;i++){const c=S.cards[i];if(c.due>cap){c.due=cap;changed=true}}
-  if(changed){S.updatedAt=Date.now();persist()}
-}
+// H: lifetime trouble record. R: the review in progress.
+let H={missed:{},shaky:{}};
+let R=null;
+let revealed=false, undoStack=[], shownKey=null;
 
-function freshState(){return {unlocked:0,cards:{},updatedAt:0,plan:{...DEFAULT_PLAN}}}
-let S=freshState();
-let queue=[], current=null, revealed=false, sessionDone=0;
-let store=null; // {save(state)}
-
-function unlock(k){
-  const from=S.unlocked, to=Math.min(N,from+k);
-  for(let i=from;i<to;i++) S.cards[i]={box:0,due:0,seen:0};
-  S.unlocked=to;
+function range(lo,hi){const a=[];for(let i=lo-1;i<hi;i++)a.push(i);return a}
+function troubleList(){return range(1,N).filter(i=>H.missed[i]||H.shaky[i])}
+// repeat in sets: each card is preceded by the one before it, all in order
+function withLeadIns(idxs){const s=new Set();idxs.forEach(i=>{if(i>0)s.add(i-1);s.add(i)});return [...s].sort((a,b)=>a-b)}
+function newReview(scopeId){
+  const sc=SCOPES.find(s=>s.id===scopeId);
+  const cards=scopeId==="trouble"?withLeadIns(troubleList()):range(sc.lo,sc.hi);
+  return {scope:scopeId,cards,round:1,queue:cards.slice(),pos:0,need:{},seen:{},roundStats:{known:0,shaky:0,missed:0},firstTry:{known:0,shaky:0,missed:0},between:false,done:false};
 }
-function isDue(i){const c=S.cards[i];return c && c.due<=Date.now()}
-function buildQueue(){
-  ensurePlanUnlock();
-  const due=[];for(let i=0;i<S.unlocked;i++) if(isDue(i)) due.push(i);
-  // learning cards in order (new material reads chronologically), review cards shuffled
-  // reviews first, then learning cards; both shuffled so the order isn't memorized
-  queue=[...shuffle(due.filter(i=>S.cards[i].box>0)),...shuffle(due.filter(i=>S.cards[i].box===0))];
-}
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({H,R}))}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.H)H=s.H;if(s&&s.R&&Array.isArray(s.R.queue))R=s.R}catch(e){}}
 
-// ---- practice mode: a shuffled run through a range; does not change the review schedule ----
-let mode="srs", practice=null;
-const RANGES=[[1,10],[11,20],[21,30],[31,40],[41,47]];
-function startPractice(lo,hi){
-  mode="practice";
-  const idx=[];for(let i=lo-1;i<hi;i++)idx.push(i);
-  practice={lo,hi,total:idx.length,right:0,missed:new Set()};
-  queue=shuffle(idx); next();
+function start(scopeId){
+  if(scopeId==="trouble"&&!troubleList().length) return;
+  R=newReview(scopeId); revealed=false; undoStack=[]; save(); render();
 }
-function exitPractice(){mode="srs";practice=null;buildQueue();next()}
-
-function grade(ok){
-  const i=current;
-  if(mode==="practice"){
-    if(ok){if(!practice.missed.has(i))practice.right++}
-    else{practice.missed.add(i);queue.splice(Math.min(3,queue.length),0,i)}
-    next();return;
+function grade(g){
+  if(!R||R.between||R.done) return;
+  undoStack.push(JSON.stringify({H,R})); if(undoStack.length>30) undoStack.shift();
+  const i=R.queue[R.pos];
+  if(g==="known") R.need[i]=Math.max(0,(R.need[i]||0)-1);
+  else{R.need[i]=Math.max(R.need[i]||0,NEED[g]);H[g][i]=(H[g][i]||0)+1}
+  if(g==="missed") R.need[i]=NEED.missed; // a miss always resets to two more
+  R.seen[i]=true;
+  R.roundStats[g]++;
+  if(R.round===1) R.firstTry[g]++;
+  R.pos++;
+  if(R.pos>=R.queue.length){
+    const weak=Object.keys(R.need).map(Number).filter(c=>R.need[c]>0).sort((a,b)=>a-b);
+    if(weak.length){R.between=true;R.nextQueue=withLeadIns(weak)}
+    else R.done=true;
   }
-  const c=S.cards[i]; c.seen=(c.seen||0)+1;
-  if(ok){
-    c.box=Math.min(INTERVAL.length-1,c.box+1);
-    const pi=planInfo();
-    if(pi&&pi.active){
-      // before review day: come back no later than review day; on review day: test morning
-      const cap=planCap(pi);
-      c.due=Math.min(dueAfter(pi.today<pi.test?CRAM[c.box]:INTERVAL[c.box]),cap);
-    }else c.due=dueAfter(INTERVAL[c.box]);
-    sessionDone++;
-  }else{
-    c.box=0; c.due=0;
-    queue.splice(Math.min(3,queue.length),0,i); // try again a few cards later
-  }
-  S.updatedAt=Date.now();
-  persist();
-  next();
+  revealed=false; save(); render();
 }
-function next(){
-  current=queue.length?queue.shift():null;
-  revealed=false;
-  // first visit: start with the first batch (no timestamp, so saved progress from another device wins)
-  if(mode==="srs" && current===null && S.unlocked===0 && !planInfo()?.active){unlock(BATCH);buildQueue();current=queue.shift()??null}
-  render();
+function nextRound(){
+  R.round++; R.queue=R.nextQueue; R.nextQueue=null; R.pos=0; R.between=false;
+  R.roundStats={known:0,shaky:0,missed:0}; save(); render();
 }
-function levelClass(i){
-  const c=S.cards[i]; if(!c) return "";
-  if(c.box===0) return "l0";
-  if(c.box===1) return "l1";
-  if(c.box<=3) return "l2";
-  if(c.box===4) return "l3";
-  return "l4";
+function undo(){
+  const s=undoStack.pop(); if(!s) return;
+  const o=JSON.parse(s); H=o.H; R=o.R; revealed=true; save(); render();
 }
-function levelText(c){
-  if(!c) return "Not started";
-  if(c.box===0) return c.seen?"Learning":"New";
-  return c.box>=5?"Mastered":`Right ${c.box}×`;
+
+function cellState(i){
+  if(!R||!(R.cards.includes(i)||R.seen[i])) return "out";
+  if(!R.seen[i]) return "";
+  const n=R.need[i]||0;
+  return n>=2?"missed":n===1?"shaky":"known";
 }
-function fmtDue(c){
-  if(!c) return "—";
-  if(c.due<=Date.now()) return "Now";
-  const days=Math.round((c.due-startOfToday())/DAY);
-  if(days<=1) return "Tomorrow";
-  return new Date(c.due).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+function scopeName(){
+  if(!R) return "";
+  if(R.scope==="trouble") return "your trouble spots";
+  const sc=SCOPES.find(s=>s.id===R.scope); return sc.id==="all"?"all 47":sc.label;
 }
+function tallyHTML(st){
+  return `<span><i style="background:var(--known)"></i>Knew <b>${st.known}</b></span>`+
+    `<span><i style="background:var(--shaky)"></i>Shaky <b>${st.shaky}</b></span>`+
+    `<span><i style="background:var(--missed)"></i>Missed <b>${st.missed}</b></span>`;
+}
+function namesList(idxs,lead){$("pNames").innerHTML="";idxs.forEach(i=>{const li=document.createElement("li");li.value=i+1;li.textContent=`${P[i].name} (${P[i].years})`+(lead&&lead(i)?" · lead-in":"");$("pNames").append(li)})}
+
 function render(){
+  const cur=R&&!R.between&&!R.done?R.queue[R.pos]:null;
+  // scope pills
+  const tl=troubleList().length;
+  $("scope").innerHTML=`<span class="label" style="margin-right:4px">Review in order</span>`+
+    SCOPES.map(s=>`<button class="pill" data-scope="${s.id}" aria-pressed="${R&&R.scope===s.id}">${s.label}</button>`).join("")+
+    (tl?`<button class="pill trouble" data-scope="trouble" aria-pressed="${R&&R.scope==="trouble"}">Trouble spots (${tl})</button>`:"");
   // strip
-  $("strip").innerHTML=P.map((p,i)=>`<div class="cell ${levelClass(i)}${i===current?" now":""}" title="#${p.n} ${p.years}"></div>`).join("");
-  // stats
-  let mastered=0,learning=0,dueTomorrow=0;const tmr=dueAfter(1);
-  for(let i=0;i<S.unlocked;i++){const c=S.cards[i];if(c.box>=4)mastered++;if(c.box===0)learning++;if(c.due>Date.now()&&c.due<=tmr)dueTomorrow++}
-  const left=(current!==null?1:0)+queue.length;
-  $("stats").innerHTML=`<span>Studying <b>${S.unlocked}</b> of ${N}</span><span>Due now <b>${left}</b></span><span>Mastered <b>${mastered}</b></span>`;
-  $("status").textContent=sessionDone?`${sessionDone} reviewed this session`:"";
-  // practice controls
-  $("pbtns").innerHTML=RANGES.map(([a,b])=>{
-    const on=mode==="practice"&&practice.lo===a&&practice.hi===b;
-    return `<button class="pill" data-lo="${a}" data-hi="${b}" aria-pressed="${on}">#${a}–${b}</button>`}).join("")
-    +`<button class="pill" data-lo="1" data-hi="${N}" aria-pressed="${mode==="practice"&&practice.lo===1&&practice.hi===N}">All 47</button>`;
-  $("banner").hidden=mode!=="practice";
-  if(mode==="practice"){
-    const left=(current!==null?1:0)+queue.length;
-    $("bannerText").textContent=`Practicing #${practice.lo}–${practice.hi} · ${left} left · doesn't change your review schedule`;
-  }
+  $("strip").innerHTML=P.map((p,i)=>`<div class="cell ${cellState(i)}${i===cur?" now":""}" title="#${p.n} ${p.name}"></div>`).join("");
+  // round line
+  if(R&&cur!==null){
+    const left=R.queue.length-R.pos;
+    $("round").innerHTML=R.round===1
+      ?`<span><b>Card ${R.pos+1} of ${R.queue.length}</b> <span class="sub">· ${scopeName()}, in order</span></span>`
+      :`<span><b>Round ${R.round}</b> <span class="sub">· repeating ${R.queue.length} card${R.queue.length>1?"s":""} in order</span></span><span class="sub">${left} left</span>`;
+  }else $("round").innerHTML="";
+  $("undo").hidden=!undoStack.length;
 
-  const studying=current!==null;
+  const studying=cur!==null;
   $("study").hidden=!studying; $("revealRow").hidden=!studying||revealed; $("gradeRow").hidden=!studying||!revealed;
-  $("done").hidden=studying;
+  $("panel").hidden=studying;
   if(studying){
-    const p=P[current], c=S.cards[current];
+    const p=P[cur], need=R.need[cur]||0;
     $("fYears").textContent=p.years; $("bYears").textContent=p.years;
-    const lv=$("fLvl"); lv.textContent=levelText(c); lv.className="lvl"+(c&&c.box===0?" new":"");
-    $("bName").innerHTML=`<span class="ord">#${p.n}</span>`; $("bName").append(p.name);
-    const pe=$("bParty"); pe.textContent=p.party; pe.className="party "+(p.party==="Republican"?"rep":p.party==="Democratic"?"dem":"");
-    $("bPrev").textContent=p.prev; $("bNext").textContent=p.next;
-    $("card").classList.toggle("flipped",revealed);
-  }else if(mode==="practice"){
-    const m=practice.missed.size;
-    $("doneTitle").textContent=`Practice done: ${practice.right} of ${practice.total} right the first time`;
-    $("doneText").textContent=m?`Missed at least once: ${[...practice.missed].sort((a,b)=>a-b).map(i=>`#${i+1} ${P[i].name}`).join(", ")}.`
-      :"A clean run. Shuffle and go again, or head back to your daily review.";
-    $("addMore").hidden=true; $("again").hidden=false; $("backDaily").hidden=false;
-  }else{
-    $("again").hidden=true; $("backDaily").hidden=true;
-    const remaining=N-S.unlocked;
-    const pi=planInfo();
-    if(pi&&pi.active){
-      const a=S.unlocked+1,b=Math.min(N,S.unlocked+pi.perDay);
-      const fmt=t=>new Date(t).toLocaleDateString(undefined,{weekday:"long"});
-      if(pi.today>=pi.test){
-        $("doneTitle").textContent="Test day";
-        $("doneText").textContent="Everything is reviewed. Good luck! Use “Practice a group” for a last run-through if you want one.";
-        $("addMore").hidden=true;
-      }else if(pi.today>=pi.review){
-        $("doneTitle").textContent="Review day done";
-        $("doneText").textContent=`All 47 have been reviewed. A final quick pass will be ready ${fmt(pi.test)} morning. Use “Practice a group” to drill any range again tonight.`;
-        $("addMore").hidden=true;
-      }else if(remaining>0){
-        $("doneTitle").textContent="Today's cards are done";
-        $("doneText").textContent=`Tomorrow brings #${a}–#${b} plus a review of earlier cards. You can get ahead now if you have time.`;
-        $("addMore").hidden=false; $("addMore").textContent=`Get ahead: add #${a}–#${b}`;
-      }else{
-        $("doneTitle").textContent="All 47 are in rotation";
-        $("doneText").textContent=`Nothing else is due today. ${fmt(pi.review)} is review day: every card comes back once.`;
-        $("addMore").hidden=true;
-      }
-    }else if(remaining>0){
-      const a=S.unlocked+1,b=Math.min(N,S.unlocked+BATCH);
-      $("doneTitle").textContent="Nothing due right now";
-      $("doneText").textContent=`You're studying presidencies #1–#${S.unlocked}. ${dueTomorrow?dueTomorrow+" card"+(dueTomorrow>1?"s come":" comes")+" back tomorrow. ":""}Add #${a}–#${b} to keep building, or stop here for today.`;
-      $("addMore").hidden=false; $("addMore").textContent=`Add #${a}–#${b}`;
-    }else{
-      $("doneTitle").textContent=mastered===N?"All 47 mastered":"All caught up";
-      $("doneText").textContent=mastered===N?"Every card is on its longest interval. Reviews will keep coming back occasionally to keep them fresh."
-        :`All 47 presidencies are in rotation. ${dueTomorrow?dueTomorrow+" card"+(dueTomorrow>1?"s come":" comes")+" back tomorrow.":"Come back when cards are due."}`;
-      $("addMore").hidden=true;
+    const f=$("fFlag");
+    const isTrouble=!!(H.missed[cur]||H.shaky[cur]);
+    const lead=R.round>1?need===0:(R.scope==="trouble"&&!isTrouble);
+    f.textContent=lead?"Lead-in":R.round>1?(need>=2?"Missed last time":"One more time"):R.scope==="trouble"?"Trouble spot":"";
+    f.className="flag "+(lead?"":need>=2?"missed":"shaky");
+    const card=$("card");
+    if(shownKey!==R.round+":"+R.pos){
+      shownKey=R.round+":"+R.pos;
+      card.style.transition="none"; card.classList.remove("flipped"); void card.offsetWidth; card.style.transition="";
     }
-  }
-  renderPlan();
+    if(revealed){
+      $("bName").innerHTML=`<span class="ord">#${p.n}</span>`; $("bName").append(p.name);
+      const pe=$("bParty"); pe.textContent=p.party; pe.className="party "+(p.party==="Republican"?"rep":p.party==="Democratic"?"dem":"");
+      $("bPrev").textContent=p.prev; $("bNext").textContent=p.next;
+    }else{["bName","bParty","bPrev","bNext"].forEach(id=>$(id).textContent="")}
+    card.classList.toggle("flipped",revealed);
+  }else renderPanel();
+
   // table
-  $("tbody").innerHTML=P.map((p,i)=>{const c=S.cards[i];
-    return `<tr><td>${p.n}</td><td class="y">${p.years}</td><td>${p.name}</td><td>${p.party}</td><td class="st">${c?fmtDue(c):"Not started"}</td></tr>`}).join("");
+  $("tbody").innerHTML=P.map((p,i)=>`<tr><td>${p.n}</td><td class="y">${p.years}</td><td>${p.name}</td><td>${p.party}</td>`+
+    `<td class="num">${H.missed[i]||""}</td><td class="num">${H.shaky[i]||""}</td></tr>`).join("");
+  $("resetRow").hidden=!tl;
 }
-
-function renderPlan(){
-  const pi=planInfo();
-  const wd=t=>new Date(t).toLocaleDateString(undefined,{weekday:"short"});
-  const md=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
-  $("planDays").hidden=!pi; $("planToggle").textContent=pi?"Turn off plan":"";
-  $("planToggle").hidden=!pi;
-  $("testDateLabel").textContent=pi?"Test date":"Set a test date to spread all 47 over the days before it:";
-  if(document.activeElement!==$("testDate")) $("testDate").value=S.plan?S.plan.test:"";
-  if(!pi){$("planSummary").textContent="";return}
-  const fullDate=new Date(pi.test).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
-  if(!pi.active){$("planSummary").textContent=`Test was ${fullDate}. Regular review has resumed.`;$("planDays").innerHTML="";return}
-  const days=[];
-  for(let k=0;k<pi.introDays;k++){
-    const t=addDays(pi.start,k),a=k*pi.perDay+1,b=Math.min(N,(k+1)*pi.perDay);
-    if(a>N) break;
-    days.push({t,range:a===b?`#${a}`:`#${a}–${b}`,sub:"new + review"});
+function renderPanel(){
+  $("pAlt").hidden=true; $("pNames").hidden=true; $("pTally").innerHTML="";
+  if(!R){
+    $("pTitle").textContent="Review the presidents in order";
+    $("pText").textContent="Go through all 47 from Washington on, or pick a group above. Whatever you don't know well comes back, in order, until you do.";
+    $("pGo").textContent="Start with all 47"; $("pGo").onclick=()=>start("all");
+    return;
   }
-  days.push({t:pi.review,range:"All 47",sub:"review only"});
-  days.push({t:pi.test,range:"Test",sub:md(pi.test),test:true});
-  $("planDays").innerHTML=days.map(d=>{
-    const cls=d.t===pi.today?"today":d.t<pi.today?"past":"";
-    return `<li class="${cls}${d.test?" test":""}"><span class="dw">${d.t===pi.today?"Today":wd(d.t)}</span><span class="dr">${d.range}</span><span class="ds">${d.sub}</span></li>`}).join("");
-  let sum;
-  if(pi.today>=pi.test) sum="Test day. Good luck!";
-  else if(pi.today>=pi.review) sum="Today: review all 47";
-  else if(pi.today<pi.start) sum=`Starts ${wd(pi.start)}. You can begin tonight.`;
-  else{const d=days[Math.min(pi.idx,days.length-3)];sum=`Today: learn ${d.range} and review`}
-  $("planSummary").textContent=`${sum} · Test ${wd(pi.test)} ${md(pi.test)}`;
-}
-$("testDate").onchange=e=>{
-  const v=e.target.value; if(!v) return;
-  const t=parseDay(v), today=studyToday();
-  if(daysBetween(today,t)<2){$("planMsg").textContent="Pick a date at least two days away, so there's a day to learn and a day to review.";return}
-  $("planMsg").textContent="";
-  const start=S.plan&&parseDay(S.plan.start)<=today&&t>parseDay(S.plan.test)?S.plan.start:isoDay(today);
-  S.plan={start, test:v}; S.updatedAt=Date.now(); persist();
-  if(mode==="srs"){buildQueue();current=null;next()}else render();
-};
-$("planToggle").onclick=()=>{S.plan=null;S.updatedAt=Date.now();persist();$("planMsg").textContent="Plan off. Set a test date any time to turn it back on.";
-  if(mode==="srs"){buildQueue();current=null;next()}else render()};
-
-// ---- persistence: this device only ----
-function lsLoad(){try{const s=JSON.parse(localStorage.getItem(LS_KEY));return s&&s.cards?s:null}catch(e){return null}}
-function persist(){try{localStorage.setItem(LS_KEY,JSON.stringify(S))}catch(e){}}
-function adopt(s){
-  if(!s||!s.cards||typeof s.unlocked!=="number") return false;
-  S={unlocked:Math.max(0,Math.min(N,s.unlocked|0)),cards:s.cards,updatedAt:s.updatedAt||0,
-     plan:("plan" in s)?s.plan:{...DEFAULT_PLAN}};
-  return true;
+  if(R.between){
+    const q=R.nextQueue;
+    $("pTitle").textContent=`Round ${R.round} done`;
+    $("pTally").innerHTML=tallyHTML(R.roundStats);
+    const weakN=q.filter(i=>R.need[i]>0).length;
+    $("pText").textContent=`Round ${R.round+1} repeats ${weakN===1?"the card":"the "+weakN+" cards"} you didn't know well, each with the card before it as a lead-in, in order:`;
+    namesList(q,i=>!(R.need[i]>0)); $("pNames").hidden=false;
+    $("pGo").textContent=`Start round ${R.round+1}`; $("pGo").onclick=nextRound;
+    return;
+  }
+  // done
+  const ft=R.firstTry, total=R.cards.length;
+  $("pTitle").textContent=R.round===1?`All ${total} known, first time through`:`All ${total} known after ${R.round} rounds`;
+  $("pTally").innerHTML=tallyHTML(ft);
+  $("pText").textContent=R.round===1?"Every card was a Knew it on the first pass.":"Counts are from the first pass. The ones that needed repeating are now in your trouble spots.";
+  $("pGo").textContent="Go through again"; $("pGo").onclick=()=>start(R.scope);
+  if(R.scope!=="all"){$("pAlt").hidden=false;$("pAlt").textContent="Review all 47";$("pAlt").onclick=()=>start("all")}
+  else if(troubleList().length){$("pAlt").hidden=false;$("pAlt").textContent="Just the trouble spots";$("pAlt").onclick=()=>start("trouble")}
 }
 
 // ---- controls ----
-function reveal(){if(current===null||revealed)return;revealed=true;render();$("got").focus({preventScroll:true})}
+function reveal(){if(!R||R.between||R.done||revealed)return;revealed=true;render();$("gKnown").focus({preventScroll:true})}
 $("card").onclick=()=>{if(!revealed)reveal()};
 $("reveal").onclick=reveal;
-$("got").onclick=()=>grade(true);
-$("miss").onclick=()=>grade(false);
-$("pbtns").onclick=e=>{const b=e.target.closest("button[data-lo]");if(b)startPractice(+b.dataset.lo,+b.dataset.hi)};
-$("again").onclick=()=>startPractice(practice.lo,practice.hi);
-$("backDaily").onclick=exitPractice;
-$("exitPractice").onclick=exitPractice;
-$("addMore").onclick=()=>{const pi=planInfo();unlock(pi&&pi.active?pi.perDay:BATCH);S.updatedAt=Date.now();persist();buildQueue();next()};
+$("gMissed").onclick=()=>grade("missed");
+$("gShaky").onclick=()=>grade("shaky");
+$("gKnown").onclick=()=>grade("known");
+$("undo").onclick=undo;
+$("scope").onclick=e=>{const b=e.target.closest("button[data-scope]");if(b)start(b.dataset.scope)};
 document.addEventListener("keydown",e=>{
-  if(e.target.closest("summary,input"))return;
-  if(current===null)return;
+  if(e.target.closest("summary,input,textarea"))return;
+  if(!R||R.between||R.done){if(e.key==="Enter"&&!$("panel").hidden&&document.activeElement===document.body){e.preventDefault();$("pGo").click()}return}
   if(!revealed&&(e.key===" "||e.key==="Enter")){e.preventDefault();reveal()}
-  else if(revealed&&e.key==="1"){grade(false)}
-  else if(revealed&&e.key==="2"){grade(true)}
+  else if(revealed&&e.key==="1")grade("missed");
+  else if(revealed&&e.key==="2")grade("shaky");
+  else if(revealed&&e.key==="3")grade("known");
 });
-function restoreReset(){$("resetRow").innerHTML='<button class="link" id="reset">Reset progress</button>';bindReset()}
 function bindReset(){$("reset").onclick=()=>{
-  $("resetRow").innerHTML='<span>Erase all progress and start over?</span><button class="btn miss" id="resetYes">Erase progress</button><button class="btn" id="resetNo">Keep it</button>';
+  $("resetRow").innerHTML='<span>Forget all past misses?</span><button class="btn g-missed" id="resetYes">Clear them</button><button class="btn" id="resetNo">Keep them</button>';
   $("resetNo").onclick=restoreReset;
-  $("resetYes").onclick=()=>{const keep=S.plan;S=freshState();S.plan=keep;if(!planInfo()?.active)unlock(BATCH);S.updatedAt=Date.now();sessionDone=0;persist();restoreReset();buildQueue();next()};
+  $("resetYes").onclick=()=>{H={missed:{},shaky:{}};if(R&&R.scope==="trouble")R=null;save();restoreReset();render()};
 }}
+function restoreReset(){$("resetRow").innerHTML='<button class="link" id="reset">Clear trouble spots</button>';bindReset()}
 bindReset();
 
-// ---- backup / restore ----
-$("copyBackup").onclick=async()=>{
-  const code=btoa(unescape(encodeURIComponent(JSON.stringify(S))));
-  $("backupText").value=code;
-  try{await navigator.clipboard.writeText(code);$("backupMsg").textContent="Copied. Paste it into the app on the other device."}
-  catch(e){$("backupText").select();$("backupMsg").textContent="Select the code above and copy it."}
-};
-$("restoreBackup").onclick=()=>{
-  try{
-    const s=JSON.parse(decodeURIComponent(escape(atob($("backupText").value.trim()))));
-    if(!adopt(s)) throw 0;
-    persist(); mode="srs"; practice=null; buildQueue(); current=null; next();
-    $("backupMsg").textContent="Progress restored.";
-  }catch(e){$("backupMsg").textContent="That code didn't work. Copy the whole code and try again."}
-};
-
 // ---- boot ----
-adopt(lsLoad());
-buildQueue(); next();
+load();
+render();
 if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().catch(()=>{})}
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 </script>
-
 </body>
 </html>
